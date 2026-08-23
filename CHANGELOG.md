@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `-All` switch to `Remove-FabricItem` to explicitly opt in to removing every item in a workspace
+
 ### Changed
+
+- **Breaking:** `Remove-FabricItem` now requires one of `-ItemID`, `-Filter`, or `-All`. Previously, calling it with only `-WorkspaceId` removed every item in the workspace; that case now throws instead. Pass `-All` to keep the old behaviour
+- `Remove-FabricItem` confirms each item individually instead of once for the whole batch, so `-WhatIf` lists the items by name and ID and `-Confirm` prompts per item
+- `Remove-FabricItem` reports item counts through `Write-Message` rather than `Write-Output`, so the count is no longer emitted into the pipeline as output
 
 ### Fixed
 
