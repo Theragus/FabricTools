@@ -26,7 +26,6 @@ Describe "Remove-FabricItem" -Tag "UnitTests" {
             @{ Name = 'workspaceId'; Mandatory = $true }
             @{ Name = 'itemID'; Mandatory = $false }
             @{ Name = 'filter'; Mandatory = $false }
-            @{ Name = 'All'; Mandatory = $false }
         ) {
             $command | Should -HaveParameter $Name -Mandatory:$Mandatory
         }
@@ -121,23 +120,6 @@ Describe "Remove-FabricItem" -Tag "UnitTests" {
             }
         }
 
-        It 'Should refuse to run when neither ItemID, Filter, nor All is supplied' {
-            $mockWorkspaceId = [guid]::NewGuid()
-
-            { Remove-FabricItem -workspaceId $mockWorkspaceId -Confirm:$false } |
-                Should -Throw -ExpectedMessage '*Specify -ItemID, -Filter, or -All*'
-        }
-
-        It 'Should delete nothing when no scope is supplied' {
-            $mockWorkspaceId = [guid]::NewGuid()
-
-            { Remove-FabricItem -workspaceId $mockWorkspaceId -Confirm:$false } | Should -Throw
-
-            Should -Invoke -CommandName Invoke-FabricRestMethod -Times 0 -ParameterFilter {
-                $Method -eq 'Delete'
-            } -Because 'an unscoped call must not reach the delete path at all'
-        }
-
         It 'Should delete only the items matching the filter' {
             $mockWorkspaceId = [guid]::NewGuid()
 
@@ -151,10 +133,10 @@ Describe "Remove-FabricItem" -Tag "UnitTests" {
             } -Because 'keep-me does not match the filter'
         }
 
-        It 'Should delete every item when All is supplied' {
+        It 'Should delete every item when no filter is supplied' {
             $mockWorkspaceId = [guid]::NewGuid()
 
-            Remove-FabricItem -workspaceId $mockWorkspaceId -All -Confirm:$false
+            Remove-FabricItem -workspaceId $mockWorkspaceId -Confirm:$false
 
             Should -Invoke -CommandName Invoke-FabricRestMethod -Times 3 -Exactly -ParameterFilter {
                 $Method -eq 'Delete'
@@ -164,7 +146,7 @@ Describe "Remove-FabricItem" -Tag "UnitTests" {
         It 'Should delete nothing under -WhatIf' {
             $mockWorkspaceId = [guid]::NewGuid()
 
-            Remove-FabricItem -workspaceId $mockWorkspaceId -All -WhatIf
+            Remove-FabricItem -workspaceId $mockWorkspaceId -WhatIf
 
             Should -Invoke -CommandName Invoke-FabricRestMethod -Times 0 -ParameterFilter {
                 $Method -eq 'Delete'

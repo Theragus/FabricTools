@@ -6,9 +6,9 @@ Function Remove-FabricItem {
 .DESCRIPTION
    The Remove-FabricItem function removes items from a specified Fabric workspace.
 
-   The scope of the deletion must be stated explicitly by supplying exactly one of `ItemID`,
-   `Filter`, or `All`. Supplying none of them is rejected, because the workspace listing that
-   drives the deletion would otherwise match every item it contains.
+   Supply `ItemID` to remove a single item. Otherwise the items in the workspace are listed and
+   removed; pass `Filter` to narrow that list to items whose DisplayName matches a wildcard
+   pattern. Without a filter, every item in the workspace is removed.
 
    Each item is confirmed individually, so `-WhatIf` lists precisely what would be removed and
    `-Confirm` prompts per item rather than once for the whole batch.
@@ -18,13 +18,10 @@ Function Remove-FabricItem {
 
 .PARAMETER Filter
    A wildcard pattern matched against each item's DisplayName. Only matching items are removed.
+   If omitted, every item in the workspace is removed.
 
 .PARAMETER ItemID
    The ID of a single item to remove.
-
-.PARAMETER All
-   Removes every item in the workspace. Required to opt in to a workspace-wide deletion, which
-   is otherwise refused.
 
 .EXAMPLE
     Removes every item in the workspace whose DisplayName contains "test".
@@ -41,10 +38,10 @@ Function Remove-FabricItem {
     ```
 
 .EXAMPLE
-    Lists what a workspace-wide deletion would remove, without removing anything.
+    Lists every item that would be removed from the workspace, without removing anything.
 
     ```powershell
-    Remove-FabricItem -WorkspaceID "12345678-90ab-cdef-1234-567890abcdef" -All -WhatIf
+    Remove-FabricItem -WorkspaceID "12345678-90ab-cdef-1234-567890abcdef" -WhatIf
     ```
 
 .INPUTS
@@ -57,8 +54,8 @@ Function Remove-FabricItem {
 
    Revision History:
 
-   - 2026-08-23 - PBO: Require ItemID, Filter, or All so an unscoped call can no longer delete
-     every item in the workspace. Moved ShouldProcess to per-item so the prompt names the item.
+   - 2026-08-25 - PBO: Confirm each item individually so the prompt and -WhatIf name the item
+     being removed, rather than confirming the whole batch once.
 
    Author: Rui Romano
    https://github.com/microsoft/Analysis-Services/tree/master/pbidevmode/fabricps-pbip
@@ -72,9 +69,7 @@ Function Remove-FabricItem {
       [Parameter(Mandatory = $false)]
       [string]$filter,
       [Parameter(Mandatory = $false)]
-      [guid]$itemID,
-      [Parameter(Mandatory = $false)]
-      [switch]$All
+      [guid]$itemID
    )
 
    Confirm-TokenState
@@ -86,11 +81,6 @@ Function Remove-FabricItem {
       return
    }
 
-   if (-not $filter -and -not $All) {
-      Write-Message -Message "No scope specified for Remove-FabricItem on workspace $WorkspaceId." -Level Error
-      throw "Specify -ItemID, -Filter, or -All. Without one of these every item in workspace $WorkspaceId would be removed; pass -All if that is intended."
-   }
-
    $items = @(Invoke-FabricRestMethod -Uri "workspaces/$WorkspaceId/items" -Method Get)
    Write-Message -Message "Workspace $WorkspaceId contains $($items.Count) item(s)." -Level Verbose
 
@@ -98,7 +88,7 @@ Function Remove-FabricItem {
       $items = @($items | Where-Object { $_.DisplayName -like $filter })
       Write-Message -Message "$($items.Count) item(s) match filter '$filter'." -Level Info
    } else {
-      Write-Message -Message "Removing all $($items.Count) item(s) from workspace $WorkspaceId." -Level Info
+      Write-Message -Message "No filter specified - removing all $($items.Count) item(s) from workspace $WorkspaceId." -Level Info
    }
 
    foreach ($item in $items) {
